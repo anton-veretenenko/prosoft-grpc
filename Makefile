@@ -1,42 +1,61 @@
-TARGET_EXEC ?= prosoft-gsync
+CXX = g++
+CPPFLAGS += `pkg-config --cflags protobuf grpc`
+CXXFLAGS += -std=c++11
+LDFLAGS += -L/usr/local/lib `pkg-config --libs protobuf grpc++`\
+           -pthread\
+           -Wl,--no-as-needed -lgrpc++_reflection -Wl,--as-needed\
+           -ldl
+PROTOC = protoc
+GRPC_CPP_PLUGIN = grpc_cpp_plugin
+GRPC_CPP_PLUGIN_PATH ?= `which $(GRPC_CPP_PLUGIN)`
 
-BUILD_DIR ?= ./build
-SRC_DIRS ?= ./src
+PROTOS_PATH = ./
 
-SRCS := $(shell find $(SRC_DIRS) -name *.cpp -or -name *.c -or -name *.s)
-OBJS := $(SRCS:%=$(BUILD_DIR)/%.o)
-DEPS := $(OBJS:.o=.d)
+vpath %.proto $(PROTOS_PATH)
 
-INC_DIRS := $(shell find $(SRC_DIRS) -type d)
-INC_FLAGS := $(addprefix -I,$(INC_DIRS))
+all: system-check calc_client calc_server
 
-CPPFLAGS ?= $(INC_FLAGS) -MMD -MP
+calc_client: calcservice.pb.o calcservice.grpc.pb.o calc_client.o
+	$(CXX) $^ $(LDFLAGS) -o $@
 
-$(BUILD_DIR)/$(TARGET_EXEC): $(OBJS)
-	$(CC) $(OBJS) -o $@ $(LDFLAGS)
-	mv $(BUILD_DIR)/$(TARGET_EXEC) ./
+calc_server: calcservice.pb.o calcservice.grpc.pb.o calc_server.o
+	$(CXX) $^ $(LDFLAGS) -o $@
 
-# assembly
-$(BUILD_DIR)/%.s.o: %.s
-	$(MKDIR_P) $(dir $@)
-	$(AS) $(ASFLAGS) -c $< -o $@
+.PRECIOUS: %.grpc.pb.cc
+%.grpc.pb.cc: %.proto
+	$(PROTOC) -I $(PROTOS_PATH) --grpc_out=. --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN_PATH) $<
 
-# c source
-$(BUILD_DIR)/%.c.o: %.c
-	$(MKDIR_P) $(dir $@)
-	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
-
-# c++ source
-$(BUILD_DIR)/%.cpp.o: %.cpp
-	$(MKDIR_P) $(dir $@)
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
-
-.PHONY: clean
+.PRECIOUS: %.pb.cc
+%.pb.cc: %.proto
+	$(PROTOC) -I $(PROTOS_PATH) --cpp_out=. $<
 
 clean:
-	$(RM) -r $(BUILD_DIR)
+	rm -f *.o *.pb.cc *.pb.h calc_client calc_server
 
--include $(DEPS)
 
-MKDIR_P ?= mkdir -p
+PROTOC_CMD = which $(PROTOC)
+PROTOC_CHECK_CMD = $(PROTOC) --version | grep -q libprotoc.3
+PLUGIN_CHECK_CMD = which $(GRPC_CPP_PLUGIN)
+HAS_PROTOC = $(shell $(PROTOC_CMD) > /dev/null && echo true || echo false)
+ifeq ($(HAS_PROTOC),true)
+HAS_VALID_PROTOC = $(shell $(PROTOC_CHECK_CMD) 2> /dev/null && echo true || echo false)
+endif
+HAS_PLUGIN = $(shell $(PLUGIN_CHECK_CMD) > /dev/null && echo true || echo false)
 
+SYSTEM_OK = false
+ifeq ($(HAS_VALID_PROTOC),true)
+ifeq ($(HAS_PLUGIN),true)
+SYSTEM_OK = true
+endif
+endif
+
+system-check:
+ifneq ($(HAS_VALID_PROTOC),true)
+	@echo "Please install protobuf 3.0.0"
+endif
+ifneq ($(HAS_PLUGIN),true)
+	@echo "Please install grpc and grpc protobuf plugin"
+endif
+ifneq ($(SYSTEM_OK),true)
+	@false
+endif
