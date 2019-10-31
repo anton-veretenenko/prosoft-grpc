@@ -25,7 +25,7 @@ class CalcClient
       calc = CalcService::NewStub(channel);
     }
 
-    int64_t calculate(int64_t arg1, int64_t arg2, char op)
+    double calculate(int64_t arg1, int64_t arg2, char op)
     {
       CalcArgs args;
       CalcResult result;
@@ -109,7 +109,7 @@ int main(int argc, char** argv)
   arg2 = atoi(argv[2]);
   op = argv[3][0];
 
-  int64_t result = client.calculate(arg1, arg2, op);
+  double result = client.calculate(arg1, arg2, op);
 
   cout << "\nResult: " << result << endl;
 

@@ -22,5 +22,5 @@ message CalcResult {
         ERR = 2;
     }
     Status status = 1;
-    sint64 result = 2;
+    double result = 2;
 }

@@ -52,7 +52,7 @@ class CalcServiceImpl final : public CalcService::Service
       result->set_status(CalcResult_Status::CalcResult_Status_DBZ);
       result->set_result(0);
     } else {
-      result->set_result(args->arg1() / args->arg2());
+      result->set_result((double)args->arg1() / (double)args->arg2());
     }
 
     return Status::OK;
