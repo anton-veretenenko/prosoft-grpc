@@ -4,6 +4,8 @@
 #include <grpcpp/grpcpp.h>
 #include "calcservice.grpc.pb.h"
 
+#include "common.h"
+
 using grpc::Server;
 using grpc::ServerBuilder;
 using grpc::ServerContext;
@@ -21,22 +23,39 @@ class CalcServiceImpl final : public CalcService::Service
   Status Add(ServerContext *context, const CalcArgs *args, CalcResult *result) override
   {
     result->set_status(CalcResult_Status::CalcResult_Status_OK);
+    result->set_result(args->arg1() + args->arg2());
+
+    return Status::OK;
   }
 
   Status Sub(ServerContext *context, const CalcArgs *args, CalcResult *result) override
   {
     result->set_status(CalcResult_Status::CalcResult_Status_OK);
+    result->set_result(args->arg1() - args->arg2());
+
+    return Status::OK;
   }
 
   Status Mul(ServerContext *context, const CalcArgs *args, CalcResult *result) override
   {
     result->set_status(CalcResult_Status::CalcResult_Status_OK);
+    result->set_result(args->arg1() * args->arg2());
+
+    return Status::OK;
   }
 
   Status Div(ServerContext *context, const CalcArgs *args, CalcResult *result) override
   {
     result->set_status(CalcResult_Status::CalcResult_Status_OK);
-    //result->set_status(CalcResult_Status::CalcResult_Status_DBZ);
+    
+    if (args->arg2() == 0) {
+      result->set_status(CalcResult_Status::CalcResult_Status_DBZ);
+      result->set_result(0);
+    } else {
+      result->set_result(args->arg1() / args->arg2());
+    }
+
+    return Status::OK;
   }
 };
 
@@ -45,11 +64,10 @@ void Serve()
   CalcServiceImpl service;
   ServerBuilder builder;
 
-  string bind = "127.0.0.1:62010";
-  builder.AddListeningPort(bind, grpc::InsecureServerCredentials());
+  builder.AddListeningPort(bind_addr, grpc::InsecureServerCredentials());
   builder.RegisterService(&service);
   unique_ptr<Server> server(builder.BuildAndStart());
-  cout << "Binded to " << bind << endl;
+  cout << "Binded to " << bind_addr << endl;
   server->Wait();
 }
 
