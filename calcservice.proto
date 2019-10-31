@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package calcservice;
+
+service CalcService {
+    rpc Add (CalcArgs) returns (CalcResult) {}
+    rpc Sub (CalcArgs) returns (CalcResult) {}
+    rpc Mul (CalcArgs) returns (CalcResult) {}
+    rpc Div (CalcArgs) returns (CalcResult) {}
+
+}
+
+message CalcArgs {
+    sint64 arg1 = 1;
+    sint64 arg2 = 2;
+}
+
+message CalcResult {
+    enum Status {
+        OK = 0;
+        DBZ = 1;
+        ERR = 2;
+    }
+    Status status = 1;
+    sint64 result = 2;
+}
